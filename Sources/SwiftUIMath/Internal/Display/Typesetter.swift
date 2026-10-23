@@ -1369,6 +1369,21 @@ extension Math {
           // Pass nextAtoms for look-ahead to find better break points
           checkAndPerformInteratomLineBreak(atom, prevNode: prevNode, nextAtoms: nextAtoms)
 
+          // Break before appending the base so its scripts remain on the same line.
+          if maxWidth > 0 && (atom.`subscript` != nil || atom.superscript != nil)
+            && (currentLine.length > 0 || currentPosition.x > 0)
+          {
+            let atomWidthWithScripts = estimateAtomWidthWithScripts(atom)
+            let interElementSpace = self.getInterElementSpace(
+              prevNode?.type ?? .ordinary, right: atom.type)
+            let projectedWidth =
+              currentPosition.x + getCurrentLineWidth() + interElementSpace + atomWidthWithScripts
+
+            if projectedWidth > maxWidth {
+              performInteratomLineBreak()
+            }
+          }
+
           if prevNode != nil {
             let interElementSpace = self.getInterElementSpace(prevNode!.type, right: atom.type)
             if currentLine.length > 0 {
@@ -1506,27 +1521,6 @@ extension Math {
                 }
               }
               // If no break point found, let it overflow (better than breaking mid-word)
-            }
-          }
-
-          // Check if atom with scripts would exceed width constraint (improved script handling)
-          if maxWidth > 0 && (atom.`subscript` != nil || atom.superscript != nil)
-            && currentLine.length > 0
-          {
-            // Estimate width including scripts
-            let atomWidthWithScripts = estimateAtomWidthWithScripts(atom)
-            let interElementSpace = self.getInterElementSpace(
-              prevNode?.type ?? .ordinary, right: atom.type)
-            let currentWidth = getCurrentLineWidth()
-            let projectedWidth = currentWidth + interElementSpace + atomWidthWithScripts
-
-            // If adding this scripted atom would exceed width, break line first
-            if projectedWidth > maxWidth {
-              self.addDisplayLine()
-              let lineHeight = calculateCurrentLineHeight()
-              currentPosition.y -= lineHeight
-              currentPosition.x = 0
-              currentLineStartIndex = displayAtoms.count
             }
           }
 

@@ -2771,6 +2771,79 @@ struct TypesetterTests {
 
   // MARK: - Improved Script Handling Tests
 
+  private static let scriptFontSizes = Array(stride(from: CGFloat(6), through: 144, by: 0.25)) + [20.4]
+
+  @Test(arguments: ["2^{10}", "O(2^d)", "x_{12}", "x_1^2"], Self.scriptFontSizes)
+  func scriptedAtoms_FitAtNaturalWidth(latex: String, fontSize: CGFloat) throws {
+    let natural = try makeScriptDisplay(latex, fontSize: fontSize, width: 0)
+    let constrained = try makeScriptDisplay(
+      latex, fontSize: fontSize, width: ceil(natural.width * 2) / 2)
+
+    #expect(abs(constrained.width - natural.width) <= 0.01)
+    #expect(abs(constrained.ascent - natural.ascent) <= 0.01)
+    #expect(abs(constrained.descent - natural.descent) <= 0.01)
+  }
+
+  @Test(arguments: ["2^{10}", "x_{12}", "x_1^2"], Self.scriptFontSizes)
+  func scriptedAtoms_StayAttachedWhenWiderThanConstraint(latex: String, fontSize: CGFloat) throws {
+    let natural = try makeScriptDisplay(latex, fontSize: fontSize, width: 0)
+    let constrained = try makeScriptDisplay(latex, fontSize: fontSize, width: natural.width / 2)
+
+    #expect(abs(constrained.width - natural.width) <= 0.01)
+    #expect(abs(constrained.ascent - natural.ascent) <= 0.01)
+    #expect(abs(constrained.descent - natural.descent) <= 0.01)
+  }
+
+  @Test(arguments: ["2^{10}", "O(2^d)"], Self.scriptFontSizes)
+  func scriptedAtoms_PreserveLayoutAtPixelRoundedWidth(latex: String, fontSize: CGFloat) throws {
+    for scale: CGFloat in [2, 3] {
+      let provider = Math.DisplayProvider()
+      let font = Math.Font(name: .latinModern, size: fontSize)
+      let natural = try #require(
+        provider.display(for: latex, font: font, style: .text, proposedWidth: 0))
+      let drawn = try #require(
+        provider.display(
+          for: latex, font: font, style: .text,
+          proposedWidth: (natural.width * scale).rounded() / scale))
+
+      #expect(abs(drawn.width - natural.width) <= 0.01, "display scale: \(scale)")
+      #expect(abs(drawn.ascent - natural.ascent) <= 0.01, "display scale: \(scale)")
+      #expect(abs(drawn.descent - natural.descent) <= 0.01, "display scale: \(scale)")
+    }
+  }
+
+  @Test
+  func scriptedAtoms_WrapWithTheirBase() throws {
+    let display = try makeScriptDisplay("a^2+b^{10}+c_1^2", fontSize: 24, width: 40)
+    let bases = display.children.compactMap { $0 as? Math.DisplayTextRun }.filter(\.hasScript)
+    let scripts = display.children.compactMap { $0 as? Math.DisplayList }
+
+    #expect(bases.count == 3)
+    #expect(Set(bases.map { $0.position.y }).count > 1)
+    for base in bases {
+      #expect(!base.text.isEmpty)
+      let attachedScripts = scripts.filter { $0.index == NSMaxRange(base.range) - 1 }
+      #expect(!attachedScripts.isEmpty)
+      for script in attachedScripts {
+        if script.linePosition == .superscript {
+          #expect(script.position.y > base.position.y)
+        } else if script.linePosition == .subscript {
+          #expect(script.position.y < base.position.y)
+        }
+        #expect(script.position.x >= base.position.x + base.width)
+      }
+    }
+  }
+
+  private func makeScriptDisplay(_ latex: String, fontSize: CGFloat, width: CGFloat) throws
+    -> Math.DisplayList
+  {
+    let font = try makeFont(size: fontSize)
+    let list = try #require(Math.Parser.build(fromString: latex))
+    return try #require(
+      Math.Typesetter.createLineForMathList(list, font: font, style: .text, maxWidth: width))
+  }
+
   @Test
   func scriptedAtoms_StayInlineWhenFit() throws {
     let font = try makeFont()
