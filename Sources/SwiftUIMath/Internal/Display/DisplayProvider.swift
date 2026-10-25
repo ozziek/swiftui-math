@@ -65,6 +65,10 @@ extension Math {
           return nil
         }
 
+        // Reserve a whole-point width so pixel alignment cannot narrow the measured
+        // layout and trigger a new line break when the canvas asks for its display.
+        displayNode.width = displayNode.width.rounded(.up)
+
         cache.displayNode.setObject(displayNode, forKey: key)
 
         if displayNode.width != roundedWidth {

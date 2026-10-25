@@ -9,6 +9,34 @@
   struct MathTests {
     private let layout = SwiftUISnapshotLayout.device(config: .iPhone8)
 
+    @Test(arguments: [CGFloat(2), 3])
+    func namedOperators(displayScale: CGFloat) {
+      let view = VStack(alignment: .leading, spacing: 16) {
+        Text("Direct SwiftUIMath rendering")
+        Math(#"O(n\log n)"#)
+          .mathTypesettingStyle(.text)
+          .mathFont(Math.Font(name: .latinModern, size: 20.4))
+        Math(#"O(n\log n)"#)
+          .mathTypesettingStyle(.text)
+          .mathRenderingMode(.multicolor)
+          .mathFont(Math.Font(name: .latinModern, size: 20.4))
+        Math(#"\sin x + \cos x + \log n"#)
+          .mathTypesettingStyle(.text)
+          .mathFont(Math.Font(name: .latinModern, size: 20.4))
+      }
+      .padding()
+      .background(Color.white)
+      .environment(\.displayScale, displayScale)
+
+      assertSnapshot(
+        of: view,
+        as: .image(
+          layout: .fixed(width: 320, height: 200),
+          traits: .init(displayScale: displayScale)),
+        named: "\(Int(displayScale))x"
+      )
+    }
+
     @Test
     func displayAndInlineStyles() {
       let view = VStack(alignment: .leading, spacing: 16) {
