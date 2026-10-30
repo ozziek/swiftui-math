@@ -2069,11 +2069,21 @@ struct ParserTests {
   }
 
   @Test
+  func dotsAliasInGeometricSeries() throws {
+    var error: Math.ParserError?
+    let list = try #require(
+      Math.Parser.build(fromString: #"1 + 2 + 4 + \dots + 2^{k-1}"#, error: &error))
+    #expect(error == nil)
+    #expect(list.atoms.map(\.nucleus) == ["1", "+", "2", "+", "4", "+", "…", "+", "2"])
+    #expect(list.atoms.last?.superscript?.atoms.map(\.nucleus) == ["k", "−", "1"])
+  }
+
+  @Test
   func specialSymbols() throws {
     let symbols = [
       "infty", "partial", "nabla", "prime", "hbar", "ell", "wp",
       "Re", "Im", "top", "bot", "emptyset", "exists", "forall",
-      "neg", "angle", "triangle", "ldots", "cdots", "vdots", "ddots",
+      "neg", "angle", "triangle", "dots", "ldots", "cdots", "vdots", "ddots",
     ]
 
     for sym in symbols {

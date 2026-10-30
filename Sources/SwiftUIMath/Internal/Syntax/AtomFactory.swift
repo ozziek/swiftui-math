@@ -15,6 +15,7 @@ extension Math {
       "gets": "leftarrow",
       "to": "rightarrow",
       "iff": "Longleftrightarrow",
+      "dots": "ldots",
       "AA": "angstrom",
     ]
 

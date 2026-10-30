@@ -4,6 +4,28 @@ import Testing
 @testable import SwiftUIMath
 
 struct DisplayProviderTests {
+  @Test(arguments: [Math.TypesettingStyle.text, .display])
+  func dotsAliasRendersTheWholeSeries(style: Math.TypesettingStyle) throws {
+    let provider = Math.DisplayProvider()
+    let font = Math.Font(name: .latinModern, size: 20.4)
+    let display = try #require(
+      provider.display(
+        for: #"1 + 2 + 4 + \dots + 2^{k-1}"#, font: font, style: style, proposedWidth: 0)
+        as? Math.DisplayList)
+    let reference = try #require(
+      provider.display(
+        for: #"1 + 2 + 4 + \ldots + 2^{k-1}"#, font: font, style: style, proposedWidth: 0)
+        as? Math.DisplayList)
+
+    #expect(display.bounds == reference.bounds)
+    #expect(display.width > 100)
+    #expect(
+      display.children.compactMap { ($0 as? Math.DisplayTextRun)?.text }.joined()
+        == "1+2+4+…+2")
+    let script = try #require(display.children.compactMap { $0 as? Math.DisplayList }.first)
+    #expect(script.children.compactMap { ($0 as? Math.DisplayTextRun)?.text }.joined() == "𝑘−1")
+  }
+
   @Test(arguments: [CGFloat(1), 2, 3], [CGFloat(13.2), 16.8, 20.4, 24, 33.6, 49.2])
   func logarithmSurvivesPixelAlignment(scale: CGFloat, fontSize: CGFloat) throws {
     let provider = Math.DisplayProvider()
