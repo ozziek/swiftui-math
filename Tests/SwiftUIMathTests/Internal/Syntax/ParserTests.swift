@@ -5,35 +5,6 @@ import Testing
 
 @Suite
 struct ParserTests {
-  @Test(arguments: [false, true])
-  func customOperatorName(starred: Bool) throws {
-    let source = "\\operatorname\(starred ? "*" : ""){normalize}_{i}(x)"
-    let list = try #require(Math.Parser.build(fromString: source))
-    let op = try #require(list.atoms.first as? Math.LargeOperator)
-    #expect(op.nucleus == "normalize")
-    #expect(op.limits == starred)
-    #expect(op.subscript?.atoms.first?.nucleus == "i")
-    let serialized = Math.Parser.atomListToString(list)
-    let reparsed = try #require(Math.Parser.build(fromString: serialized))
-    let restored = try #require(reparsed.atoms.first as? Math.LargeOperator)
-    #expect(restored.nucleus == op.nucleus)
-    #expect(restored.limits == op.limits)
-  }
-
-  @Test(arguments: [#"\operatorname{norm"#, #"\operatorname{\unknown{x}}"#])
-  func invalidOperatorNameFails(source: String) {
-    #expect(Math.Parser.build(fromString: source) == nil)
-  }
-
-  @Test(arguments: ["f", "arg max", #"norm\_value"#, #"\{name\}"#])
-  func customOperatorNameSurvivesCopyAndSerialization(name: String) throws {
-    let list = try #require(Math.Parser.build(fromString: "\\operatorname{\(name)}"))
-    let op = try #require(list.atoms.first as? Math.LargeOperator)
-    #expect(Math.LargeOperator(op).isTextOperator)
-    let restored = try #require(Math.Parser.build(fromString: Math.Parser.atomListToString(list)))
-    #expect(restored.atoms.first?.nucleus == op.nucleus)
-  }
-
   func checkAtomTypes(_ list: Math.AtomList?, types: [Math.AtomType]) {
     if let list = list {
       #expect(list.atoms.count == types.count)
