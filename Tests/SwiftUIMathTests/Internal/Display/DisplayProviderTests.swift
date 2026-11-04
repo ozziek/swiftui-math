@@ -5,6 +5,19 @@ import Testing
 
 struct DisplayProviderTests {
   @Test(arguments: [Math.TypesettingStyle.text, .display])
+  func customOperatorRendersWithUprightText(style: Math.TypesettingStyle) throws {
+    let display = try #require(
+      Math.DisplayProvider().display(
+        for: #"y = \operatorname{normalize}(z)"#,
+        font: .init(name: .latinModern, size: 20.4), style: style, proposedWidth: 320)
+        as? Math.DisplayList)
+    #expect(display.width > 100)
+    #expect(
+      display.children.compactMap { ($0 as? Math.DisplayTextRun)?.text }.joined()
+        == "𝑦=normalize(𝑧)")
+  }
+
+  @Test(arguments: [Math.TypesettingStyle.text, .display])
   func dotsAliasRendersTheWholeSeries(style: Math.TypesettingStyle) throws {
     let provider = Math.DisplayProvider()
     let font = Math.Font(name: .latinModern, size: 20.4)

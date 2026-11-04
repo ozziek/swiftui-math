@@ -2373,7 +2373,7 @@ extension Math {
       // Only show limits to the side in script modes to keep them compact
       let limits = op.limits && (style == .display || style == .text)
       var delta = CGFloat(0)
-      if op.nucleus.count == 1 {
+      if op.nucleus.count == 1 && !op.isTextOperator {
         var glyph = self.findGlyphForCharacterAtIndex(op.nucleus.startIndex, inString: op.nucleus)
         if style == .display && glyph != 0 {
           // Enlarge the character in display style.

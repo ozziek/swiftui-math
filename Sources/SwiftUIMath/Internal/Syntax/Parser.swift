@@ -571,14 +571,22 @@ extension Math {
             }
           } else if atom.type == .largeOperator {
             let op = atom as! LargeOperator
-            let command = AtomFactory.latexSymbolName(for: atom)
-            let originalOp = AtomFactory.atom(forLatexSymbol: command!) as! LargeOperator
-            str += "\\\(command!) "
-            if originalOp.limits != op.limits {
-              if op.limits {
-                str += "\\limits "
-              } else {
-                str += "\\nolimits "
+            if op.isTextOperator {
+              let name = op.nucleus.map { character -> String in
+                if character == "\\" { return "\\backslash " }
+                return "{}$#%_".contains(character) ? "\\\(character)" : String(character)
+              }.joined()
+              str += "\\operatorname\(op.limits ? "*" : ""){\(name)}"
+            } else {
+              let command = AtomFactory.latexSymbolName(for: atom)
+              let originalOp = AtomFactory.atom(forLatexSymbol: command!) as! LargeOperator
+              str += "\\\(command!) "
+              if originalOp.limits != op.limits {
+                if op.limits {
+                  str += "\\limits "
+                } else {
+                  str += "\\nolimits "
+                }
               }
             }
           } else if atom.type == .space {
@@ -641,6 +649,35 @@ extension Math {
     }
 
     mutating func atomForCommand(_ command: String) -> Atom? {
+      if command == "operatorname" || command == "operatorname*" {
+        let oldFontStyle = currentFontStyle
+        let oldSpacesAllowed = spacesAllowed
+        currentFontStyle = .roman
+        spacesAllowed = true
+        defer {
+          currentFontStyle = oldFontStyle
+          spacesAllowed = oldSpacesAllowed
+        }
+        guard let name = buildInternal(true), error == nil else { return nil }
+        // Named operators use the existing upright operator layout. Reject structured
+        // arguments rather than silently dropping fractions, scripts or accents.
+        guard
+          name.atoms.allSatisfy({
+            [
+              .ordinary, .variable, .number, .binaryOperator, .relation, .punctuation,
+              .open, .close,
+            ].contains($0.type)
+              && $0.subscript == nil && $0.superscript == nil
+          })
+        else {
+          setError(.invalidCommand, message: "Unsupported content in operator name")
+          return nil
+        }
+        let op = AtomFactory.operatorWithName(
+          name.atoms.map(\.nucleus).joined(), limits: command == "operatorname*")
+        op.isTextOperator = true
+        return op
+      }
       if let atom = AtomFactory.atom(forLatexSymbol: command) {
         return atom
       }
