@@ -65,7 +65,7 @@ func getInterElementSpaceArrayIndexForType(_ type: Math.AtomType, row: Bool) -> 
   case .number, .variable, .unaryOperator:
     return 0
   // Decorative types (accent, underline, overline) are treated as ordinary
-  case .accent, .underline, .overline:
+  case .accent, .underline, .overline, .horizontalBrace:
     return 0
   // Special types that don't typically participate in spacing are treated as ordinary
   case .boundary, .space, .style, .table:
@@ -1215,6 +1215,14 @@ extension Math {
             self.makeScripts(
               atom, display: display, index: UInt(atom.indexRange.location), delta: 0)
           }
+
+        case .horizontalBrace:
+          if currentLine.length > 0 { self.addDisplayLine() }
+          self.addInterElementSpace(prevNode, currentType: .ordinary)
+          let display = makeHorizontalBrace(atom as! HorizontalBrace)
+          display.position = currentPosition
+          displayAtoms.append(display)
+          currentPosition.x += display.width
 
         case .underline:
           // stash the existing layout
@@ -2681,6 +2689,44 @@ extension Math {
       }
       // We exhausted all the variants and none was larger than the width, so we return the largest
       return curGlyph
+    }
+
+    /// Braces keep the expression's baseline and place annotations beyond the decoration.
+    /// Use the font's widest fitting variant, stretching only along its horizontal axis.
+    func makeHorizontalBrace(_ brace: HorizontalBrace) -> DisplayNode {
+      let inner = Typesetter.createLineForMathList(
+        brace.innerList, font: font, style: style, cramped: cramped)!
+      let symbol = brace.isOver ? "⏞" : "⏟"
+      let glyph = findGlyphForCharacterAtIndex(symbol.startIndex, inString: symbol)
+      var ascent: CGFloat = 0
+      var descent: CGFloat = 0
+      var width: CGFloat = 0
+      let variant = findVariantGlyph(
+        glyph, withMaxWidth: inner.width, maxWidth: &ascent,
+        glyphDescent: &descent, glyphWidth: &width)
+      let decoration = DisplayGlyph(glyph: variant, font: styleFont.font, range: brace.indexRange)
+      decoration.ascent = ascent
+      decoration.descent = descent
+      decoration.width = max(width, inner.width)
+      decoration.horizontalScale = width > 0 ? decoration.width / width : 1
+      let gap = styleFont.metrics.mathUnit * 2
+      decoration.position = CGPoint(
+        x: 0, y: brace.isOver ? inner.ascent + gap + descent : -inner.descent - gap - ascent)
+      inner.position = CGPoint(x: (decoration.width - inner.width) / 2, y: 0)
+      let nucleus = DisplayList(children: [inner, decoration], range: brace.indexRange)
+      let upper = brace.superscript.flatMap {
+        Typesetter.createLineForMathList($0, font: font, style: scriptStyle(), cramped: false)
+      }
+      let lower = brace.subscript.flatMap {
+        Typesetter.createLineForMathList($0, font: font, style: scriptStyle(), cramped: true)
+      }
+      let result = DisplayLargeOperator(
+        nucleus: nucleus, upperLimit: upper, lowerLimit: lower, limitShift: 0, extraPadding: 0)
+      result.upperLimitGap = styleFont.metrics.upperLimitGapMin
+      result.lowerLimitGap = styleFont.metrics.lowerLimitGapMin
+      result.range = brace.indexRange
+      result.position = .zero
+      return result
     }
 
     func makeAccent(_ accent: Accent?) -> DisplayNode? {

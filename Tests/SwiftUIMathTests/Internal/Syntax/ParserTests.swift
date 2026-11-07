@@ -5,6 +5,27 @@ import Testing
 
 @Suite
 struct ParserTests {
+  @Test(arguments: ["underbrace", "overbrace"])
+  func horizontalBraceRoundTrips(command: String) throws {
+    let source = "\\\(command){24:1}_{0.96\\text{ on half spam}}"
+    let list = try #require(Math.Parser.build(fromString: source))
+    let brace = try #require(list.atoms.first as? Math.HorizontalBrace)
+    #expect(brace.isOver == (command == "overbrace"))
+    let copied = try #require(brace.copy() as? Math.HorizontalBrace)
+    #expect(copied.innerList !== brace.innerList)
+    #expect(copied.subscript !== brace.subscript)
+    let restored = try #require(Math.Parser.build(fromString: Math.Parser.atomListToString(list)))
+    let parsed = try #require(restored.atoms.first as? Math.HorizontalBrace)
+    #expect(parsed.isOver == brace.isOver)
+    #expect(parsed.innerList?.atoms.count == brace.innerList?.atoms.count)
+    #expect(parsed.subscript?.atoms.count == brace.subscript?.atoms.count)
+  }
+
+  @Test(arguments: [#"\underbrace{x"#, #"\overbrace{\unknown{x}}"#])
+  func malformedBraceFails(source: String) {
+    #expect(Math.Parser.build(fromString: source) == nil)
+  }
+
   @Test(arguments: [false, true])
   func customOperatorName(starred: Bool) throws {
     let source = "\\operatorname\(starred ? "*" : ""){normalize}_{i}(x)"

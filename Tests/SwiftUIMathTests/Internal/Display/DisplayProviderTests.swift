@@ -4,6 +4,29 @@ import Testing
 @testable import SwiftUIMath
 
 struct DisplayProviderTests {
+  @Test(arguments: ["underbrace", "overbrace"], [Math.TypesettingStyle.text, .display])
+  func braceKeepsBodyAndCentersAnnotations(command: String, style: Math.TypesettingStyle) throws {
+    let provider = Math.DisplayProvider()
+    let source = "\\\(command){24:1}_{0.96\\text{ on half spam}}^{\\text{odds}}"
+    let display = try #require(
+      provider.display(
+        for: source, font: .init(name: .latinModern, size: 24), style: style, proposedWidth: 0)
+        as? Math.DisplayList)
+    let brace = try #require(display.children.first as? Math.DisplayLargeOperator)
+    let nucleus = try #require(brace.nucleus as? Math.DisplayList)
+    let body = try #require(nucleus.children.first as? Math.DisplayList)
+    let glyph = try #require(nucleus.children.last as? Math.DisplayGlyph)
+    let label = try #require(brace.lowerLimit)
+    #expect(glyph.glyph != 0)
+    #expect(body.position.y == 0)
+    #expect(glyph.width >= body.width)
+    #expect(label.position.y + label.ascent < -nucleus.descent)
+    #expect(abs(label.position.x + label.width / 2 - (brace.position.x + brace.width / 2)) < 0.01)
+    #expect(display.width > 80)
+    #expect(display.ascent > 0 && display.descent > 0)
+    #expect((glyph.position.y > 0) == (command == "overbrace"))
+  }
+
   @Test(arguments: [Math.TypesettingStyle.text, .display])
   func customOperatorRendersWithUprightText(style: Math.TypesettingStyle) throws {
     let display = try #require(

@@ -565,6 +565,9 @@ extension Math {
               str += "\\underline"
               str += "{\(atomListToString(underline.innerList!))}"
             }
+          } else if let brace = atom as? HorizontalBrace {
+            str += brace.isOver ? "\\overbrace" : "\\underbrace"
+            str += "{\(atomListToString(brace.innerList!))}"
           } else if atom.type == .accent {
             if let accent = atom as? Accent {
               str += "\\\(AtomFactory.accentName(accent)!){\(atomListToString(accent.innerList!))}"
@@ -649,6 +652,10 @@ extension Math {
     }
 
     mutating func atomForCommand(_ command: String) -> Atom? {
+      if command == "underbrace" || command == "overbrace" {
+        guard let inner = buildInternal(true), error == nil else { return nil }
+        return HorizontalBrace(isOver: command == "overbrace", innerList: inner)
+      }
       if command == "operatorname" || command == "operatorname*" {
         let oldFontStyle = currentFontStyle
         let oldSpacesAllowed = spacesAllowed
@@ -1059,6 +1066,10 @@ extension Math {
     }
 
     mutating func atom(forCommand command: String) -> Atom? {
+      if command == "underbrace" || command == "overbrace" {
+        guard let inner = buildInternal(true), error == nil else { return nil }
+        return HorizontalBrace(isOver: command == "overbrace", innerList: inner)
+      }
       if let atom = AtomFactory.atom(forLatexSymbol: command) {
         return atom
       }

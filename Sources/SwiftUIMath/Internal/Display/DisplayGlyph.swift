@@ -3,6 +3,7 @@ import Foundation
 
 extension Math {
   final class DisplayGlyph: DisplayShiftedNode {
+    var horizontalScale: CGFloat = 1
     var glyph: UInt16
     var font: Math.Font
 

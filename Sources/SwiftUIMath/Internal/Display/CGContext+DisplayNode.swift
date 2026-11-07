@@ -66,6 +66,7 @@ extension CGContext {
     saveGState()
 
     translateBy(x: glyph.position.x, y: glyph.position.y - glyph.shiftDown)
+    scaleBy(x: glyph.horizontalScale, y: 1)
     textPosition = .zero
 
     setFillColor(foregroundColor)
